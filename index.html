@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devoir – Systèmes d'Information | ESTM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+  :root {
+    --bg: #0f1923;
+    --surface: #162030;
+    --card: #1c2d3f;
+    --border: #243447;
+    --accent: #2eaadc;
+    --accent2: #e8a020;
+    --danger: #e05252;
+    --success: #3ecf8e;
+    --text: #e8edf2;
+    --muted: #7a9ab5;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .exam-header {
+    background: linear-gradient(135deg, #0a3a5c 0%, #0f1923 60%);
+    border-bottom: 2px solid var(--accent);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .exam-header .brand { display: flex; align-items: center; gap: 12px; }
+  .exam-header .brand-logo {
+    width: 42px; height: 42px; border-radius: 8px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; font-weight: 700;
+  }
+  .exam-header .brand-text h1 { font-size: 1rem; font-weight: 700; letter-spacing: .5px; }
+  .exam-header .brand-text p { font-size: .75rem; color: var(--muted); }
+
+  #timer-box {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(46,170,220,.12); border: 1px solid var(--accent);
+    border-radius: 8px; padding: 8px 18px;
+  }
+  #timer-box span { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  #timer { font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+  #timer.warning { color: var(--accent2); }
+  #timer.danger  { color: var(--danger);  animation: pulse .7s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+  /* ── MAIN CONTAINER ── */
+  .container { max-width: 820px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── INSTRUCTIONS ── */
+  .instr-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 32px 36px; margin-bottom: 24px;
+  }
+  .instr-card h2 {
+    font-family: 'Playfair Display', serif; font-size: 1.55rem;
+    color: var(--accent); margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
+  }
+  .alert-banner {
+    background: rgba(232,160,32,.1); border-left: 4px solid var(--accent2);
+    border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;
+    font-size: .9rem; line-height: 1.7;
+  }
+  .alert-banner strong { color: var(--accent2); }
+  .instr-list { list-style: none; counter-reset: inst; }
+  .instr-list li {
+    counter-increment: inst; display: flex; gap: 14px; align-items: flex-start;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .9rem;
+  }
+  .instr-list li:last-child { border-bottom: none; }
+  .instr-list li::before {
+    content: counter(inst);
+    min-width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+
+  /* ── STUDENT FORM ── */
+  .student-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field label { font-size: .8rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+  .form-field input, .form-field select {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 7px; padding: 10px 14px; color: var(--text); font-size: .95rem; font-family: inherit;
+    transition: border-color .2s;
+  }
+  .form-field input:focus, .form-field select:focus { outline: none; border-color: var(--accent); }
+  .form-field.full { grid-column: 1/-1; }
+  .field-error { border-color: var(--danger) !important; }
+  .err-msg { font-size: .78rem; color: var(--danger); margin-top: 2px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 28px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: inherit; font-size: .95rem; font-weight: 600; transition: all .2s; text-decoration: none;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2594c2; transform: translateY(-1px); }
+  .btn-success { background: var(--success); color: #0f1923; }
+  .btn-success:hover { background: #35b87c; }
+  .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+  .btn-outline:hover { background: rgba(46,170,220,.1); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap { background: var(--border); border-radius: 99px; height: 5px; margin-bottom: 28px; }
+  .progress-bar-fill { height: 5px; border-radius: 99px; background: var(--accent); transition: width .3s; }
+  .progress-label { font-size: .78rem; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--accent);
+    display: flex; align-items: center; gap: 10px; margin: 32px 0 16px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .section-badge {
+    background: var(--accent); color: #fff; font-size: .72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 99px; font-family: 'Inter', sans-serif;
+  }
+
+  /* ── QUESTION CARD ── */
+  .q-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+  .q-card:hover { border-color: var(--accent); }
+  .q-num { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
+  .q-text { font-size: .97rem; font-weight: 500; margin-bottom: 14px; line-height: 1.5; }
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 14px; cursor: pointer; transition: all .18s; font-size: .9rem;
+  }
+  .option:hover { border-color: var(--accent); background: rgba(46,170,220,.07); }
+  .option input[type="radio"], .option input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; flex-shrink: 0; }
+  .option.selected { border-color: var(--accent); background: rgba(46,170,220,.12); }
+
+  /* ── SUBMIT AREA ── */
+  .submit-area { text-align: center; margin-top: 40px; padding: 32px; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); }
+  .submit-area p { color: var(--muted); font-size: .88rem; margin-bottom: 16px; }
+
+  /* ── RESULTS ── */
+  .result-hero {
+    text-align: center; padding: 48px 32px;
+    background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px;
+  }
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%;
+    background: conic-gradient(var(--accent) 0%, var(--border) 0%);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2rem; font-weight: 700;
+    box-shadow: 0 0 30px rgba(46,170,220,.2);
+    position: relative;
+  }
+  .score-circle::before {
+    content: ''; position: absolute; inset: 8px; border-radius: 50%; background: var(--surface);
+  }
+  .score-circle span { position: relative; z-index: 1; }
+  .mention {
+    display: inline-block; padding: 6px 20px; border-radius: 99px;
+    font-weight: 700; font-size: .9rem; margin-bottom: 16px;
+  }
+  .result-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 8px; }
+  .result-hero p { color: var(--muted); font-size: .92rem; }
+  .penalties-box { background: rgba(224,82,82,.1); border: 1px solid var(--danger); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: .88rem; color: var(--danger); }
+  .result-details { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
+  .result-details h3 { font-size: .95rem; font-weight: 600; margin-bottom: 14px; color: var(--accent); }
+  .result-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+  .result-row:last-child { border-bottom: none; }
+  .correct { color: var(--success); }
+  .incorrect { color: var(--danger); }
+  .partial { color: var(--accent2); }
+
+  /* ── VIOLATION TOAST ── */
+  #violation-toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px);
+    background: var(--danger); color: #fff; padding: 12px 24px; border-radius: 8px;
+    font-weight: 600; z-index: 9999; transition: transform .4s; font-size: .9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  #violation-toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── SCREENSHOT OVERLAY ── */
+  #screenshot-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(10,20,32,.96);
+    z-index: 9000; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+  }
+  #screenshot-overlay.show { display: flex; }
+  #screenshot-canvas { border: 2px solid var(--accent); border-radius: 8px; max-width: 90vw; max-height: 75vh; }
+  .ss-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  @media(max-width:600px){
+    .student-form { grid-template-columns: 1fr; }
+    .exam-header { padding: 12px 16px; }
+    .container { padding: 20px 14px 50px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="exam-header" id="exam-header">
+  <div class="brand">
+    <div class="brand-logo">ESTM</div>
+    <div class="brand-text">
+      <h1>Systèmes d'Information</h1>
+      <p>Ecole Superieur de Technologie et de Management</p>
+    </div>
+  </div>
+  <div id="timer-box" style="display:none;">
+    <span>Temps</span>
+    <div id="timer">01:30:00</div>
+  </div>
+</header>
+
+<!-- VIOLATION TOAST -->
+<div id="violation-toast">⚠️ Sortie de page détectée ! Pénalité appliquée.</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- ══ SCREEN 1: INSTRUCTIONS ══ -->
+  <div id="screen-instructions" class="screen active">
+    <div class="instr-card">
+      <h2>📋 Instructions du Devoir</h2>
+
+      <div class="alert-banner">
+        <strong>⚠️ AVERTISSEMENT ANTI-TRICHE :</strong><br>
+        Ce devoir surveille les tentatives de sortie de page (changement d'onglet, minimisation de fenêtre, etc.).
+        La <strong>première sortie</strong> est un avertissement sans pénalité. Chaque sortie suivante entraîne une <strong>déduction de 0,5 point</strong> sur votre note finale.
+        Toutes les violations sont enregistrées et affichées dans vos résultats.
+      </div>
+
+      <ul class="instr-list">
+        <li>Ce devoir est composé de 3 sections : <strong>Questions Vrai/Faux</strong>, <strong>Questions à choix unique</strong> et <strong>Questions à choix multiples</strong>.</li>
+        <li>Durée totale : <strong>1 heure 30 minutes</strong>. Le chronomètre démarre dès que vous cliquez sur « Commencer ».</li>
+        <li>Le devoir est noté sur <strong>20 points</strong>. Chaque réponse correcte vaut un nombre de points proportionnel.</li>
+        <li>Remplissez obligatoirement vos informations personnelles (<strong>Nom</strong> et <strong>Prénom</strong>) avant de commencer.</li>
+        <li>À la fin du temps imparti, le devoir est <strong>soumis automatiquement</strong>.</li>
+        <li>Restez sur cette page pendant toute la durée du devoir. <strong>Toute sortie après la première sera sanctionnée.</strong></li>
+        <li>Après soumission, vous pouvez <strong>capturer votre résultat</strong> sous forme d'image pour l'envoyer à votre enseignant.</li>
+        <li>Une fois le devoir commencé, vous ne pourrez plus modifier vos informations personnelles.</li>
+      </ul>
+    </div>
+
+    <!-- Student info form -->
+    <div class="instr-card">
+      <h2>👤 Informations Étudiant</h2>
+      <div class="student-form">
+        <div class="form-field">
+          <label>Nom <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-nom" placeholder="Votre nom de famille">
+          <span class="err-msg" id="err-nom"></span>
+        </div>
+        <div class="form-field">
+          <label>Prénom <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-prenom" placeholder="Votre prénom">
+          <span class="err-msg" id="err-prenom"></span>
+        </div>
+        <div class="form-field">
+          <label>ID / Matricule</label>
+          <input type="text" id="f-id" placeholder="Ex: IAM2024001">
+        </div>
+        <div class="form-field">
+          <label>Classe</label>
+          <input type="text" id="f-classe" placeholder="Ex: L2 INFO">
+        </div>
+        <div class="form-field">
+          <label>Semestre</label>
+          <select id="f-semestre">
+            <option value="">-- Sélectionner --</option>
+            <option>Semestre 1</option><option>Semestre 2</option>
+            <option>Semestre 3</option><option>Semestre 4</option>
+            <option>Semestre 5</option><option>Semestre 6</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Année universitaire</label>
+          <input type="text" id="f-annee" placeholder="Ex: 2024-2025">
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="btn btn-primary" onclick="startExam()" style="font-size:1.05rem;padding:14px 40px;">
+          🚀 Commencer le Devoir
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN 2: EXAM ══ -->
+  <div id="screen-exam" class="screen">
+    <div class="progress-label">
+      <span id="prog-text">Section 1 / 3</span>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <div id="questions-container"></div>
+    <div class="submit-area">
+      <p>Vérifiez vos réponses avant de soumettre. Cette action est <strong>irréversible</strong>.</p>
+      <button class="btn btn-success" onclick="submitExam()">✅ Soumettre le Devoir</button>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN 3: RESULTS ══ -->
+  <div id="screen-results" class="screen">
+    <div class="result-hero" id="result-hero">
+      <div class="score-circle"><span id="score-display">–</span></div>
+      <div class="mention" id="mention-badge">–</div>
+      <h2 id="result-name">–</h2>
+      <p id="result-meta">–</p>
+    </div>
+    <div id="penalties-display"></div>
+    <div class="result-details">
+      <h3>📊 Détail par section</h3>
+      <div id="detail-rows"></div>
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openScreenshot()">📸 Capturer le résultat</button>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- SCREENSHOT OVERLAY -->
+<div id="screenshot-overlay">
+  <div id="screenshot-canvas"></div>
+  <div class="ss-actions">
+    <a id="ss-download" class="btn btn-primary" download="resultat_devoir_SI.png">⬇️ Télécharger l'image</a>
+    <button class="btn btn-outline" onclick="closeScreenshot()">✖ Fermer</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   DATA
+══════════════════════════════════════════ */
+const TOTAL_TIME = 90 * 60; // 90 min in seconds
+const POINTS_PER_VF = 20 / 60;   // 20 questions → 60 total; weight distributed
+const TOTAL_QUESTIONS = 60;
+
+// Section weights: VF=20q, QCU=20q, QCM=20q → each correct = 20/60 ≈ 0.333 pts
+// We'll compute score as: correct_answers / total_questions * 20
+
+const VF_QUESTIONS = [
+  {q:"Les données et les informations sont des notions identiques dans le domaine informatique.", answer:"B"},
+  {q:"Les systèmes d'information sont inutiles pour la prise de décision dans une organisation.", answer:"B"},
+  {q:"Un système d'information peut collecter, traiter, stocker et diffuser des informations.", answer:"A"},
+  {q:"Les flux d'information dans une entreprise ne concernent que les produits physiques.", answer:"B"},
+  {q:"La saisie est une fonction essentielle des systèmes d'information modernes.", answer:"A"},
+  {q:"La classification des informations peut se faire selon leur origine, durée de vie ou traitement.", answer:"A"},
+  {q:"Le modèle en cascade limite les interactions entre les équipes.", answer:"A"},
+  {q:"Le modèle en spirale met l'accent sur la gestion des risques à chaque étape.", answer:"A"},
+  {q:"Une relation binaire \"un à un\" peut être traduite en fusionnant les tables des entités.", answer:"A"},
+  {q:"MERISE est une méthode systémique de conception de systèmes d'information.", answer:"A"},
+  {q:"La méthode MERISE sépare clairement données et traitements.", answer:"A"},
+  {q:"Le cycle de vie dans MERISE inclut des phases de conception et de réalisation.", answer:"A"},
+  {q:"Une relation est toujours définie par une clé primaire.", answer:"B"},
+  {q:"Une cardinalité de \"0-N\" signifie qu'une entité peut être liée à aucune ou plusieurs autres.", answer:"A"},
+  {q:"Les tuples représentent les colonnes d'une table.", answer:"B"},
+  {q:"Une clé primaire d'une table est toujours unique.", answer:"A"},
+  {q:"Un identifiant est un attribut ou un ensemble d'attributs.", answer:"A"},
+  {q:"Une relation réflexive concerne deux entités différentes.", answer:"B"},
+  {q:"Une relation de dimension 3 ne peut pas être transformée en relations binaires équivalentes.", answer:"B"},
+  {q:"Une clé étrangère peut être utilisée pour établir des contraintes d'intégrité référentielle.", answer:"A"},
+];
+
+const QCU_QUESTIONS = [
+  {q:"Le terme « information » vient du latin :", opts:["Informatum","Informare","Informatie","Informatica"], answer:"b"},
+  {q:"Les informations internes d'une entreprise :", opts:["Proviennent de l'environnement extérieur","Sont générées au sein de l'entreprise","Ont toujours une durée de vie volatile","Sont des informations brutes"], answer:"b"},
+  {q:"Un système est un ensemble :", opts:["D'éléments isolés sans lien","D'éléments reliés et en interaction","De flux uniquement numériques","De composants matériels uniquement"], answer:"b"},
+  {q:"Un système d'information est structuré pour :", opts:["Imprimer des documents","Créer des matériels informatiques","Traiter, mémoriser et diffuser des informations","Collecter uniquement des données brutes"], answer:"c"},
+  {q:"Une des fonctions principales d'un système d'information est de :", opts:["Détruire les données obsolètes","Collecter et traiter l'information","Fabriquer des composants matériels","Organiser des réunions d'équipe"], answer:"b"},
+  {q:"Le stockage de l'information dans un SI consiste à :", opts:["Archiver et conserver pour un usage futur","Imprimer et distribuer les informations","Transférer les données brutes","Supprimer les informations non utiles"], answer:"a"},
+  {q:"La restitution d'une information peut se faire via :", opts:["Impression, affichage, ou synthèse vocale","Périphériques de stockage uniquement","Protocoles de communication bas niveau","Liaison hertzienne exclusivement"], answer:"a"},
+  {q:"Un exemple d'information persistante est :", opts:["L'heure d'arrivée au poste de travail","Le montant d'une facture","Les adresses des clients et fournisseurs","Le poids d'une pièce fabriquée"], answer:"c"},
+  {q:"Les systèmes d'information dans une entreprise servent à :", opts:["Réduire les coûts des produits","Faciliter la prise de décision et la gestion","Remplacer le personnel humain","Développer uniquement des logiciels"], answer:"b"},
+  {q:"Quelle est l'étape initiale dans la conception d'un système d'information ?", opts:["Réalisation","Tests","Analyse des besoins","Maintenance"], answer:"c"},
+  {q:"Quel est le rôle des cardinalités dans une relation ?", opts:["Identifier les entités","Définir le nombre de participations d'une entité à une relation","Décrire les attributs des relations","Assurer l'intégrité référentielle"], answer:"b"},
+  {q:"Quelle cardinalité représente \"aucune ou plusieurs\" ?", opts:["1-1","0-N","1-N","0-1"], answer:"b"},
+  {q:"Une relation ternaire implique :", opts:["Deux entités reliées par une contrainte","Trois entités reliées simultanément","Trois relations binaires équivalentes","Une clé primaire et une clé étrangère"], answer:"b"},
+  {q:"Quel élément est utilisé pour relier deux tables ?", opts:["Clé candidate","Contrainte d'intégrité","Clé étrangère","Cardinalité"], answer:"c"},
+  {q:"Que signifie une relation réflexive ?", opts:["Elle relie deux entités différentes","Elle relie une entité à elle-même","Elle relie trois entités simultanément","Elle ne contient pas d'attributs"], answer:"b"},
+  {q:"Quel élément est indispensable dans une table relationnelle ?", opts:["Clé primaire","Clé étrangère","Cardinalité","Domaine composé"], answer:"a"},
+  {q:"Quelle règle s'applique pour transformer une relation \"un à un\" ?", opts:["Ajouter une clé étrangère dans les deux tables","Fusionner les tables ou créer une table intermédiaire","Ajouter un domaine composé","Créer une relation ternaire"], answer:"b"},
+  {q:"Que décrit le modèle logique des données (MLD) ?", opts:["Les relations binaires uniquement","La structure des données utilisée sans référence au langage informatique","La structure finale de la base de données","Les contraintes physiques des données"], answer:"b"},
+  {q:"Dans MERISE, quel niveau traite de la structure physique des données ?", opts:["Conceptuel","Organisationnel","Logique","Physique"], answer:"d"},
+  {q:"Quel est le rôle principal d'une clé étrangère ?", opts:["Identifier chaque ligne d'une table","Relier une table à une autre","Définir les cardinalités","Garantir l'intégrité des domaines"], answer:"b"},
+];
+
+const QCM_QUESTIONS = [
+  {q:"Quelles sont les origines du mot « informatique » ?", opts:["Information","Automatique","Logiciel","Calcul"], answer:["a","b"]},
+  {q:"Quels termes en anglais désignent l'informatique ?", opts:["Information technology (IT)","Data management","Computer science","Automatic processing"], answer:["a","c"]},
+  {q:"Quelles sont les différences entre données et informations ?", opts:["Les données sont toujours organisées et interprétées.","Les informations sont des données traitées.","Les données sont brutes et sans signification propre.","Les informations ne nécessitent aucun traitement."], answer:["b","c"]},
+  {q:"Parmi les éléments suivants, lesquels sont des périphériques d'entrée ?", opts:["Clavier","Écran","Scanner","Imprimante"], answer:["a","c"]},
+  {q:"Quels sont des exemples d'informations volatiles ?", opts:["Les adresses des clients","L'heure d'arrivée d'un employé","Le montant d'une facture mensuelle","Le poids d'une pièce fabriquée"], answer:["b","d"]},
+  {q:"Quels sont les objectifs d'une base de données relationnelle ?", opts:["Stocker des informations en tables structurées","Faciliter les calculs financiers","Permettre des relations entre les données","Gérer les informations volatiles uniquement"], answer:["a","c"]},
+  {q:"Quels sont les types d'informations classées selon leur traitement ?", opts:["Informations brutes","Informations persistantes","Informations calculées","Informations internes"], answer:["a","c"]},
+  {q:"Quels sont les flux d'information dans une entreprise ?", opts:["Flux internes","Flux externes","Flux volatiles","Flux de données uniquement"], answer:["a","b"]},
+  {q:"Quelles informations sont essentielles pour la prise de décision ?", opts:["Informations pertinentes","Données non traitées","Informations contextualisées","Informations persistantes"], answer:["a","c"]},
+  {q:"Quelles étapes sont essentielles pour la modélisation d'un système d'information ?", opts:["Identifier les acteurs et leurs tâches","Stocker directement les données sans analyse","Définir les flux et les traitements des données","Conception de solutions matérielles avancées"], answer:["a","c"]},
+  {q:"Quels types d'entités existent dans un modèle conceptuel ?", opts:["Entités régulières","Entités composées","Entités faibles","Entités atomiques"], answer:["a","c"]},
+  {q:"Quels sont les rôles des cardinalités dans un modèle conceptuel ?", opts:["Décrire les relations entre entités","Limiter le nombre de participations d'une entité à une relation","Définir les clés étrangères","Assurer l'intégrité référentielle"], answer:["a","b"]},
+  {q:"Que décrit une cardinalité minimale dans une relation ?", opts:["Le nombre maximal de participations","Le nombre minimal de participations","Une entité obligatoire dans une relation","Une entité facultative dans une relation"], answer:["b","c"]},
+  {q:"Quels éléments peuvent caractériser une relation ternaire ?", opts:["Implique trois entités simultanément","Peut être remplacée par des relations binaires équivalentes","Requiert des clés étrangères pour les relations binaires","Nécessite une table intermédiaire"], answer:["a","b"]},
+  {q:"Quels rôles jouent les clés candidates ?", opts:["Identifier de manière unique les lignes d'une table","Être utilisées comme clé primaire potentielle","Définir les cardinalités","Garantir l'intégrité référentielle"], answer:["a","b"]},
+  {q:"Quels éléments peuvent être analysés dans un diagramme des flux ?", opts:["Acteurs internes et externes","Flux d'informations","Attributs des entités","Cardinalités des relations"], answer:["a","b"]},
+  {q:"Quels sont les objectifs des contraintes d'intégrité référentielle ?", opts:["Assurer la validité des relations entre tables","Garantir l'unicité des clés étrangères","Prévenir les valeurs orphelines dans les tables référencées","Réduire la taille des données stockées"], answer:["a","c"]},
+  {q:"Quels aspects du modèle MERISE sont indépendants de la technologie informatique ?", opts:["Niveau conceptuel","Niveau organisationnel","Niveau logique","Niveau physique"], answer:["a","b"]},
+  {q:"Quels modèles sont utilisés pour représenter les données dans le niveau logique ?", opts:["Modèle logique des données (MLD)","Modèle organisationnel des données (MOD)","Modèle logique des traitements (MLT)","Modèle physique des données (MPD)"], answer:["a","c"]},
+  {q:"Quels sont les rôles d'une clé primaire dans une table relationnelle ?", opts:["Garantir l'unicité des tuples","Permettre la recherche rapide d'informations","Établir des relations avec d'autres tables","Identifier les colonnes d'une table"], answer:["a","b"]},
+];
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+let timerInterval = null;
+let timeLeft = TOTAL_TIME;
+let violationCount = 0;
+let penalty = 0;
+let studentInfo = {};
+let answers = {}; // { qid: value }
+let examSubmitted = false;
+
+/* ══════════════════════════════════════════
+   VALIDATE & START
+══════════════════════════════════════════ */
+function startExam() {
+  const nom    = document.getElementById('f-nom').value.trim();
+  const prenom = document.getElementById('f-prenom').value.trim();
+  let valid = true;
+
+  document.getElementById('err-nom').textContent = '';
+  document.getElementById('err-prenom').textContent = '';
+  document.getElementById('f-nom').classList.remove('field-error');
+  document.getElementById('f-prenom').classList.remove('field-error');
+
+  if (!nom) {
+    document.getElementById('err-nom').textContent = 'Le nom est obligatoire.';
+    document.getElementById('f-nom').classList.add('field-error');
+    valid = false;
+  }
+  if (!prenom) {
+    document.getElementById('err-prenom').textContent = 'Le prénom est obligatoire.';
+    document.getElementById('f-prenom').classList.add('field-error');
+    valid = false;
+  }
+  if (!valid) return;
+
+  studentInfo = {
+    nom, prenom,
+    id:      document.getElementById('f-id').value.trim(),
+    classe:  document.getElementById('f-classe').value.trim(),
+    semestre:document.getElementById('f-semestre').value,
+    annee:   document.getElementById('f-annee').value.trim(),
+  };
+
+  showScreen('screen-exam');
+  document.getElementById('timer-box').style.display = 'flex';
+  renderQuestions();
+  startTimer();
+  setupAntiCheat();
+}
+
+/* ══════════════════════════════════════════
+   RENDER QUESTIONS
+══════════════════════════════════════════ */
+function renderQuestions() {
+  const c = document.getElementById('questions-container');
+  c.innerHTML = '';
+
+  // Section 1: VF
+  c.insertAdjacentHTML('beforeend', `<div class="section-title"><span class="section-badge">Section 1</span> Questions Vrai / Faux <small style="color:var(--muted);font-size:.8rem;font-family:Inter">(20 questions)</small></div>`);
+  VF_QUESTIONS.forEach((q, i) => {
+    c.insertAdjacentHTML('beforeend', vfCard(q, i));
+  });
+
+  // Section 2: QCU
+  c.insertAdjacentHTML('beforeend', `<div class="section-title"><span class="section-badge">Section 2</span> Questions à Choix Unique <small style="color:var(--muted);font-size:.8rem;font-family:Inter">(20 questions)</small></div>`);
+  QCU_QUESTIONS.forEach((q, i) => {
+    c.insertAdjacentHTML('beforeend', qcuCard(q, i));
+  });
+
+  // Section 3: QCM
+  c.insertAdjacentHTML('beforeend', `<div class="section-title"><span class="section-badge">Section 3</span> Questions à Choix Multiple <small style="color:var(--muted);font-size:.8rem;font-family:Inter">(20 questions — deux réponses possibles)</small></div>`);
+  QCM_QUESTIONS.forEach((q, i) => {
+    c.insertAdjacentHTML('beforeend', qcmCard(q, i));
+  });
+
+  updateProgress();
+}
+
+function vfCard(q, i) {
+  return `<div class="q-card" id="qcard-vf-${i}">
+    <div class="q-num">VF ${i+1}</div>
+    <div class="q-text">${q.q}</div>
+    <div class="options">
+      <label class="option" id="opt-vf-${i}-A">
+        <input type="radio" name="vf-${i}" value="A" onchange="recordVF(${i},'A')"> Vrai
+      </label>
+      <label class="option" id="opt-vf-${i}-B">
+        <input type="radio" name="vf-${i}" value="B" onchange="recordVF(${i},'B')"> Faux
+      </label>
+    </div>
+  </div>`;
+}
+
+function qcuCard(q, i) {
+  const letters = ['a','b','c','d'];
+  const opts = q.opts.map((o,j) => `
+    <label class="option" id="opt-qcu-${i}-${letters[j]}">
+      <input type="radio" name="qcu-${i}" value="${letters[j]}" onchange="recordQCU(${i},'${letters[j]}')">
+      <span><strong>${letters[j].toUpperCase()}.</strong> ${o}</span>
+    </label>`).join('');
+  return `<div class="q-card" id="qcard-qcu-${i}">
+    <div class="q-num">QCU ${i+1}</div>
+    <div class="q-text">${q.q}</div>
+    <div class="options">${opts}</div>
+  </div>`;
+}
+
+function qcmCard(q, i) {
+  const letters = ['a','b','c','d'];
+  const opts = q.opts.map((o,j) => `
+    <label class="option" id="opt-qcm-${i}-${letters[j]}">
+      <input type="checkbox" name="qcm-${i}-${letters[j]}" value="${letters[j]}" onchange="recordQCM(${i})">
+      <span><strong>${letters[j].toUpperCase()}.</strong> ${o}</span>
+    </label>`).join('');
+  return `<div class="q-card" id="qcard-qcm-${i}">
+    <div class="q-num">QCM ${i+1}</div>
+    <div class="q-text">${q.q}</div>
+    <div class="options">${opts}</div>
+  </div>`;
+}
+
+function recordVF(i, val) {
+  answers[`vf-${i}`] = val;
+  ['A','B'].forEach(v => {
+    document.getElementById(`opt-vf-${i}-${v}`).classList.toggle('selected', v===val);
+  });
+  updateProgress();
+}
+
+function recordQCU(i, val) {
+  answers[`qcu-${i}`] = val;
+  ['a','b','c','d'].forEach(v => {
+    document.getElementById(`opt-qcu-${i}-${v}`).classList.toggle('selected', v===val);
+  });
+  updateProgress();
+}
+
+function recordQCM(i) {
+  const checked = [];
+  ['a','b','c','d'].forEach(v => {
+    const cb = document.querySelector(`input[name="qcm-${i}-${v}"]`);
+    document.getElementById(`opt-qcm-${i}-${v}`).classList.toggle('selected', cb && cb.checked);
+    if (cb && cb.checked) checked.push(v);
+  });
+  answers[`qcm-${i}`] = checked;
+  updateProgress();
+}
+
+function updateProgress() {
+  const answered = Object.keys(answers).filter(k => {
+    const v = answers[k];
+    return Array.isArray(v) ? v.length > 0 : v !== undefined && v !== '';
+  }).length;
+  const pct = Math.round(answered / TOTAL_QUESTIONS * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  const sec = answered <= 20 ? '1' : answered <= 40 ? '2' : '3';
+  document.getElementById('prog-text').textContent = `Section ${sec} / 3 — ${answered}/${TOTAL_QUESTIONS} réponses`;
+}
+
+/* ══════════════════════════════════════════
+   TIMER
+══════════════════════════════════════════ */
+function startTimer() {
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      submitExam(true);
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const h = Math.floor(timeLeft / 3600);
+  const m = Math.floor((timeLeft % 3600) / 60);
+  const s = timeLeft % 60;
+  const str = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const el = document.getElementById('timer');
+  el.textContent = str;
+  el.className = '';
+  if (timeLeft <= 300) el.classList.add('danger');
+  else if (timeLeft <= 600) el.classList.add('warning');
+}
+
+/* ══════════════════════════════════════════
+   ANTI-CHEAT
+══════════════════════════════════════════ */
+function setupAntiCheat() {
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('blur', onBlur);
+}
+
+function onVisibilityChange() {
+  if (document.hidden && !examSubmitted) triggerViolation();
+}
+function onBlur() {
+  if (!examSubmitted) triggerViolation();
+}
+
+function triggerViolation() {
+  violationCount++;
+  const toast = document.getElementById('violation-toast');
+  if (violationCount === 1) {
+    toast.textContent = '⚠️ Attention ! Première sortie détectée — avertissement sans pénalité.';
+    toast.style.background = 'var(--accent2)';
+  } else {
+    penalty += 0.5;
+    toast.textContent = `🚨 Sortie n°${violationCount} détectée ! −0,5 point (total pénalités : −${penalty.toFixed(1)} pts)`;
+    toast.style.background = 'var(--danger)';
+  }
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+/* ══════════════════════════════════════════
+   SUBMIT & SCORE
+══════════════════════════════════════════ */
+function submitExam(auto = false) {
+  if (examSubmitted) return;
+  if (!auto) {
+    const answered = Object.keys(answers).filter(k => {
+      const v = answers[k];
+      return Array.isArray(v) ? v.length > 0 : v !== undefined;
+    }).length;
+    if (answered < TOTAL_QUESTIONS && !confirm(`Vous avez répondu à ${answered}/${TOTAL_QUESTIONS} questions. Soumettre quand même ?`)) return;
+  }
+  examSubmitted = true;
+  clearInterval(timerInterval);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  window.removeEventListener('blur', onBlur);
+
+  // Compute score
+  let vfCorrect = 0, qcuCorrect = 0, qcmCorrect = 0;
+
+  VF_QUESTIONS.forEach((q, i) => {
+    if (answers[`vf-${i}`] === q.answer) vfCorrect++;
+  });
+  QCU_QUESTIONS.forEach((q, i) => {
+    if (answers[`qcu-${i}`] === q.answer) qcuCorrect++;
+  });
+  QCM_QUESTIONS.forEach((q, i) => {
+    const given = (answers[`qcm-${i}`] || []).slice().sort().join(',');
+    const expected = q.answer.slice().sort().join(',');
+    if (given === expected) qcmCorrect++;
+  });
+
+  const rawScore = (vfCorrect + qcuCorrect + qcmCorrect) / TOTAL_QUESTIONS * 20;
+  let finalScore = Math.max(0, rawScore - penalty);
+  finalScore = Math.round(finalScore * 100) / 100;
+
+  showResults(finalScore, rawScore, vfCorrect, qcuCorrect, qcmCorrect);
+}
+
+function getMention(score) {
+  if (score >= 16) return {label:'Très Bien', color:'#3ecf8e'};
+  if (score >= 14) return {label:'Bien', color:'#2eaadc'};
+  if (score >= 12) return {label:'Assez Bien', color:'#7b68ee'};
+  if (score >= 10) return {label:'Passable', color:'#e8a020'};
+  return {label:'Insuffisant', color:'#e05252'};
+}
+
+function showResults(finalScore, rawScore, vf, qcu, qcm) {
+  showScreen('screen-results');
+  document.getElementById('timer-box').style.display = 'none';
+
+  const mention = getMention(finalScore);
+  const pct = Math.min(100, finalScore / 20 * 100);
+
+  // Score circle gradient
+  document.querySelector('.score-circle').style.background =
+    `conic-gradient(${mention.color} ${pct}%, var(--border) 0%)`;
+
+  document.getElementById('score-display').textContent = finalScore.toFixed(2);
+  const mb = document.getElementById('mention-badge');
+  mb.textContent = mention.label;
+  mb.style.background = mention.color + '22';
+  mb.style.color = mention.color;
+  mb.style.border = `1px solid ${mention.color}`;
+
+  document.getElementById('result-name').textContent =
+    `${studentInfo.prenom} ${studentInfo.nom}`;
+  document.getElementById('result-meta').textContent =
+    [studentInfo.classe, studentInfo.semestre, studentInfo.annee].filter(Boolean).join(' · ') || 'Informations non renseignées';
+
+  // Penalties
+  const pd = document.getElementById('penalties-display');
+  if (violationCount > 0) {
+    pd.innerHTML = `<div class="penalties-box">
+      ⚠️ <strong>${violationCount} sortie(s) de page détectée(s)</strong> —
+      Note brute : ${rawScore.toFixed(2)}/20 → Pénalité appliquée : −${penalty.toFixed(1)} pt(s) →
+      <strong>Note finale : ${finalScore.toFixed(2)}/20</strong>
+    </div>`;
+  } else {
+    pd.innerHTML = '';
+  }
+
+  // Detail rows
+  document.getElementById('detail-rows').innerHTML = `
+    <div class="result-row"><span>Vrai / Faux</span><span class="correct">${vf} / 20 correctes</span></div>
+    <div class="result-row"><span>Choix unique</span><span class="correct">${qcu} / 20 correctes</span></div>
+    <div class="result-row"><span>Choix multiples</span><span class="correct">${qcm} / 20 correctes</span></div>
+    <div class="result-row"><span>Total réponses correctes</span><span>${vf+qcu+qcm} / 60</span></div>
+    <div class="result-row"><span>Score brut</span><span>${rawScore.toFixed(2)} / 20</span></div>
+    <div class="result-row"><span>Pénalités sorties de page</span><span class="${penalty>0?'incorrect':'correct'}">−${penalty.toFixed(1)} pt(s)</span></div>
+    <div class="result-row" style="font-weight:700;font-size:1rem;"><span>NOTE FINALE</span><span style="color:${mention.color}">${finalScore.toFixed(2)} / 20 — ${mention.label}</span></div>
+  `;
+}
+
+/* ══════════════════════════════════════════
+   SCREENSHOT (canvas-based)
+══════════════════════════════════════════ */
+function openScreenshot() {
+  const overlay = document.getElementById('screenshot-overlay');
+  const canvasDiv = document.getElementById('screenshot-canvas');
+  const mention = getMention(parseFloat(document.getElementById('score-display').textContent)||0);
+  const finalScore = document.getElementById('score-display').textContent;
+  const name = document.getElementById('result-name').textContent;
+  const meta = document.getElementById('result-meta').textContent;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 640; canvas.height = 380;
+  const ctx = canvas.getContext('2d');
+
+  // background
+  ctx.fillStyle = '#0f1923';
+  ctx.fillRect(0, 0, 640, 380);
+
+  // top accent bar
+  ctx.fillStyle = '#2eaadc';
+  ctx.fillRect(0, 0, 640, 5);
+
+  // IAM label
+  ctx.fillStyle = '#2eaadc';
+  ctx.fillRect(32, 24, 52, 52);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('IAM', 58, 57);
+
+  ctx.fillStyle = '#e8edf2';
+  ctx.font = 'bold 16px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Systèmes d\'Information', 96, 42);
+  ctx.fillStyle = '#7a9ab5';
+  ctx.font = '12px Inter, sans-serif';
+  ctx.fillText('Institut Africain de Management', 96, 62);
+
+  // divider
+  ctx.strokeStyle = '#243447';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(32, 92); ctx.lineTo(608, 92); ctx.stroke();
+
+  // score big
+  ctx.fillStyle = mention.color;
+  ctx.font = 'bold 72px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(finalScore, 160, 200);
+  ctx.fillStyle = '#7a9ab5';
+  ctx.font = '14px Inter, sans-serif';
+  ctx.fillText('/ 20', 160, 224);
+
+  // mention pill background
+  ctx.fillStyle = mention.color + '33';
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(80, 240, 160, 32, 16) :
+    (() => { ctx.moveTo(96,240); ctx.lineTo(224,240); ctx.arcTo(240,240,240,256,16); ctx.lineTo(240,256); ctx.arcTo(240,272,224,272,16); ctx.lineTo(96,272); ctx.arcTo(80,272,80,256,16); ctx.lineTo(80,256); ctx.arcTo(80,240,96,240,16); })();
+  ctx.fill();
+  ctx.fillStyle = mention.color;
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(mention.label, 160, 261);
+
+  // student info
+  ctx.fillStyle = '#e8edf2';
+  ctx.font = 'bold 18px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(name, 300, 160);
+  ctx.fillStyle = '#7a9ab5';
+  ctx.font = '13px Inter, sans-serif';
+  ctx.fillText(meta, 300, 182);
+
+  // detail lines
+  const details = [
+    ['Vrai / Faux', document.querySelectorAll('.result-row')[0].querySelector('.correct').textContent],
+    ['Choix unique', document.querySelectorAll('.result-row')[1].querySelector('.correct').textContent],
+    ['Choix multiples', document.querySelectorAll('.result-row')[2].querySelector('.correct').textContent],
+  ];
+  ctx.fillStyle = '#243447';
+  ctx.fillRect(290, 200, 300, 100);
+  details.forEach(([label, val], i) => {
+    ctx.fillStyle = '#7a9ab5'; ctx.font = '12px Inter'; ctx.textAlign = 'left';
+    ctx.fillText(label, 302, 222 + i*28);
+    ctx.fillStyle = '#3ecf8e'; ctx.textAlign = 'right';
+    ctx.fillText(val, 582, 222 + i*28);
+  });
+
+  if (parseFloat(finalScore) < parseFloat(document.querySelectorAll('.result-row')[5]?.querySelector('.incorrect')?.textContent?.replace('-','')?.replace(' pt(s)','')||'0') > 0) {
+    ctx.fillStyle = '#e05252'; ctx.font = '12px Inter'; ctx.textAlign = 'left';
+    ctx.fillText('Pénalités appliquées', 302, 308);
+  }
+
+  // date
+  ctx.fillStyle = '#7a9ab5'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
+  ctx.fillText(new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'}), 320, 356);
+
+  // bottom border
+  ctx.fillStyle = '#2eaadc';
+  ctx.fillRect(0, 375, 640, 5);
+
+  canvasDiv.innerHTML = '';
+  canvasDiv.appendChild(canvas);
+
+  const dl = document.getElementById('ss-download');
+  dl.href = canvas.toDataURL('image/png');
+  dl.download = `resultat_SI_${studentInfo.nom}_${studentInfo.prenom}.png`;
+
+  overlay.classList.add('show');
+}
+
+function closeScreenshot() {
+  document.getElementById('screenshot-overlay').classList.remove('show');
+}
+
+/* ══════════════════════════════════════════
+   SCREEN SWITCH
+══════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
