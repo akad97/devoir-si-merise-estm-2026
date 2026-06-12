@@ -79,12 +79,6 @@
     font-family: 'Playfair Display', serif; font-size: 1.55rem;
     color: var(--accent); margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
   }
-  .alert-banner {
-    background: rgba(232,160,32,.1); border-left: 4px solid var(--accent2);
-    border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;
-    font-size: .9rem; line-height: 1.7;
-  }
-  .alert-banner strong { color: var(--accent2); }
   .instr-list { list-style: none; counter-reset: inst; }
   .instr-list li {
     counter-increment: inst; display: flex; gap: 14px; align-items: flex-start;
@@ -189,7 +183,6 @@
   }
   .result-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 8px; }
   .result-hero p { color: var(--muted); font-size: .92rem; }
-  .penalties-box { background: rgba(224,82,82,.1); border: 1px solid var(--danger); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: .88rem; color: var(--danger); }
   .result-details { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
   .result-details h3 { font-size: .95rem; font-weight: 600; margin-bottom: 14px; color: var(--accent); }
   .result-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
@@ -197,15 +190,6 @@
   .correct { color: var(--success); }
   .incorrect { color: var(--danger); }
   .partial { color: var(--accent2); }
-
-  /* ── VIOLATION TOAST ── */
-  #violation-toast {
-    position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-100px);
-    background: var(--danger); color: #fff; padding: 12px 24px; border-radius: 8px;
-    font-weight: 600; z-index: 9999; transition: transform .4s; font-size: .9rem;
-    box-shadow: 0 8px 24px rgba(0,0,0,.4);
-  }
-  #violation-toast.show { transform: translateX(-50%) translateY(0); }
 
   /* ── SCREENSHOT OVERLAY ── */
   #screenshot-overlay {
@@ -248,20 +232,12 @@
     <div class="instr-card">
       <h2>📋 Instructions du Devoir</h2>
 
-      <div class="alert-banner">
-        <strong>⚠️ AVERTISSEMENT ANTI-TRICHE :</strong><br>
-        Ce devoir surveille les tentatives de sortie de page (changement d'onglet, minimisation de fenêtre, etc.).
-        La <strong>première sortie</strong> est un avertissement sans pénalité. Chaque sortie suivante entraîne une <strong>déduction de 0,5 point</strong> sur votre note finale.
-        Toutes les violations sont enregistrées et affichées dans vos résultats.
-      </div>
-
       <ul class="instr-list">
         <li>Ce devoir est composé de 3 sections : <strong>Questions Vrai/Faux</strong>, <strong>Questions à choix unique</strong> et <strong>Questions à choix multiples</strong>.</li>
         <li>Durée totale : <strong>1 heure 30 minutes</strong>. Le chronomètre démarre dès que vous cliquez sur « Commencer ».</li>
         <li>Le devoir est noté sur <strong>20 points</strong>. Chaque réponse correcte vaut un nombre de points proportionnel.</li>
         <li>Remplissez obligatoirement vos informations personnelles (<strong>Nom</strong> et <strong>Prénom</strong>) avant de commencer.</li>
         <li>À la fin du temps imparti, le devoir est <strong>soumis automatiquement</strong>.</li>
-        <li>Restez sur cette page pendant toute la durée du devoir. <strong>Toute sortie après la première sera sanctionnée.</strong></li>
         <li>Après soumission, vous pouvez <strong>capturer votre résultat</strong> sous forme d'image pour l'envoyer à votre enseignant.</li>
         <li>Une fois le devoir commencé, vous ne pourrez plus modifier vos informations personnelles.</li>
       </ul>
@@ -438,12 +414,9 @@ const QCM_QUESTIONS = [
 ══════════════════════════════════════════ */
 let timerInterval = null;
 let timeLeft = TOTAL_TIME;
-let violationCount = 0;
-let penalty = 0;
 let studentInfo = {};
 let answers = {}; // { qid: value }
 let examSubmitted = false;
-let lastViolationTime = 0; // anti-doublon (évite double comptage blur+visibilitychange)
 
 /* ══════════════════════════════════════════
    VALIDATE & START
@@ -482,7 +455,6 @@ function startExam() {
   document.getElementById('timer-box').style.display = 'flex';
   renderQuestions();
   startTimer();
-  setupAntiCheat();
 }
 
 /* ══════════════════════════════════════════
@@ -622,39 +594,6 @@ function updateTimerDisplay() {
 }
 
 /* ══════════════════════════════════════════
-   ANTI-CHEAT
-   Correction : un seul écouteur (visibilitychange) est utilisé.
-   L'ancien code combinait "visibilitychange" ET "blur", qui se
-   déclenchent simultanément lors d'un changement d'onglet —
-   ce qui comptait UNE sortie comme DEUX violations et faussait
-   le calcul de la pénalité (-0,5 par sortie après l'avertissement).
-   Un anti-doublon temporel est conservé en sécurité supplémentaire.
-══════════════════════════════════════════ */
-function setupAntiCheat() {
-  document.addEventListener('visibilitychange', onVisibilityChange);
-}
-
-function onVisibilityChange() {
-  if (document.hidden && !examSubmitted) triggerViolation();
-}
-
-function triggerViolation() {
-  // Anti-doublon : ignore les déclenchements multiples très proches
-  const now = Date.now();
-  if (now - lastViolationTime < 800) return;
-  lastViolationTime = now;
-
-  violationCount++;
-
-  if (violationCount === 1) {
-    // 1ère sortie = avertissement, AUCUNE pénalité
-  } else {
-    // À partir de la 2ème sortie : -0,5 point chacune
-    penalty += 0.5;
-  }
-}
-
-/* ══════════════════════════════════════════
    SUBMIT & SCORE
 ══════════════════════════════════════════ */
 function submitExam(auto = false) {
@@ -668,7 +607,6 @@ function submitExam(auto = false) {
   }
   examSubmitted = true;
   clearInterval(timerInterval);
-  document.removeEventListener('visibilitychange', onVisibilityChange);
 
   // Compute score
   let vfCorrect = 0, qcuCorrect = 0, qcmCorrect = 0;
@@ -686,10 +624,9 @@ function submitExam(auto = false) {
   });
 
   const rawScore = (vfCorrect + qcuCorrect + qcmCorrect) / TOTAL_QUESTIONS * 20;
-  let finalScore = Math.max(0, rawScore - penalty);
-  finalScore = Math.round(finalScore * 100) / 100;
+  const finalScore = Math.round(rawScore * 100) / 100;
 
-  showResults(finalScore, rawScore, vfCorrect, qcuCorrect, qcmCorrect);
+  showResults(finalScore, vfCorrect, qcuCorrect, qcmCorrect);
 }
 
 function getMention(score) {
@@ -700,7 +637,7 @@ function getMention(score) {
   return {label:'Insuffisant', color:'#e05252'};
 }
 
-function showResults(finalScore, rawScore, vf, qcu, qcm) {
+function showResults(finalScore, vf, qcu, qcm) {
   showScreen('screen-results');
   document.getElementById('timer-box').style.display = 'none';
 
@@ -723,18 +660,8 @@ function showResults(finalScore, rawScore, vf, qcu, qcm) {
   document.getElementById('result-meta').textContent =
     [studentInfo.classe, studentInfo.semestre, studentInfo.annee].filter(Boolean).join(' · ') || 'Informations non renseignées';
 
-  // Penalties
-  const pd = document.getElementById('penalties-display');
-  if (violationCount > 0) {
-    pd.innerHTML = `<div class="penalties-box">
-      ⚠️ <strong>${violationCount} sortie(s) de page détectée(s)</strong>
-      (1ère = avertissement, ${Math.max(0, violationCount-1)} sortie(s) supplémentaire(s) pénalisée(s)) —
-      Note brute : ${rawScore.toFixed(2)}/20 → Pénalité appliquée : −${penalty.toFixed(1)} pt(s) →
-      <strong>Note finale : ${finalScore.toFixed(2)}/20</strong>
-    </div>`;
-  } else {
-    pd.innerHTML = '';
-  }
+  // Penalties display removed (anti-cheat detection disabled)
+  document.getElementById('penalties-display').innerHTML = '';
 
   // Detail rows
   document.getElementById('detail-rows').innerHTML = `
@@ -742,8 +669,6 @@ function showResults(finalScore, rawScore, vf, qcu, qcm) {
     <div class="result-row"><span>Choix unique</span><span class="correct">${qcu} / 20 correctes</span></div>
     <div class="result-row"><span>Choix multiples</span><span class="correct">${qcm} / 20 correctes</span></div>
     <div class="result-row"><span>Total réponses correctes</span><span>${vf+qcu+qcm} / 60</span></div>
-    <div class="result-row"><span>Score brut</span><span>${rawScore.toFixed(2)} / 20</span></div>
-    <div class="result-row"><span>Pénalités sorties de page</span><span class="${penalty>0?'incorrect':'correct'}">−${penalty.toFixed(1)} pt(s)</span></div>
     <div class="result-row" style="font-weight:700;font-size:1rem;"><span>NOTE FINALE</span><span style="color:${mention.color}">${finalScore.toFixed(2)} / 20 — ${mention.label}</span></div>
   `;
 }
@@ -841,12 +766,6 @@ function openScreenshot() {
     ctx.fillStyle = '#3ecf8e'; ctx.textAlign = 'right';
     ctx.fillText(val, 582, 222 + i*28);
   });
-
-  // pénalités (affichage simple, lecture directe de la variable `penalty`)
-  if (penalty > 0) {
-    ctx.fillStyle = '#e05252'; ctx.font = '12px Inter'; ctx.textAlign = 'left';
-    ctx.fillText(`Pénalités sorties de page : −${penalty.toFixed(1)} pt(s)`, 302, 308);
-  }
 
   // date
   ctx.fillStyle = '#7a9ab5'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
