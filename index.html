@@ -240,9 +240,6 @@
   </div>
 </header>
 
-<!-- VIOLATION TOAST -->
-<div id="violation-toast">⚠️ Sortie de page détectée ! Pénalité appliquée.</div>
-
 <!-- MAIN -->
 <div class="container">
 
@@ -362,7 +359,6 @@
    DATA
 ══════════════════════════════════════════ */
 const TOTAL_TIME = 90 * 60; // 90 min in seconds
-const POINTS_PER_VF = 20 / 60;   // 20 questions → 60 total; weight distributed
 const TOTAL_QUESTIONS = 60;
 
 // Section weights: VF=20q, QCU=20q, QCM=20q → each correct = 20/60 ≈ 0.333 pts
@@ -447,6 +443,7 @@ let penalty = 0;
 let studentInfo = {};
 let answers = {}; // { qid: value }
 let examSubmitted = false;
+let lastViolationTime = 0; // anti-doublon (évite double comptage blur+visibilitychange)
 
 /* ══════════════════════════════════════════
    VALIDATE & START
@@ -626,32 +623,35 @@ function updateTimerDisplay() {
 
 /* ══════════════════════════════════════════
    ANTI-CHEAT
+   Correction : un seul écouteur (visibilitychange) est utilisé.
+   L'ancien code combinait "visibilitychange" ET "blur", qui se
+   déclenchent simultanément lors d'un changement d'onglet —
+   ce qui comptait UNE sortie comme DEUX violations et faussait
+   le calcul de la pénalité (-0,5 par sortie après l'avertissement).
+   Un anti-doublon temporel est conservé en sécurité supplémentaire.
 ══════════════════════════════════════════ */
 function setupAntiCheat() {
   document.addEventListener('visibilitychange', onVisibilityChange);
-  window.addEventListener('blur', onBlur);
 }
 
 function onVisibilityChange() {
   if (document.hidden && !examSubmitted) triggerViolation();
 }
-function onBlur() {
-  if (!examSubmitted) triggerViolation();
-}
 
 function triggerViolation() {
+  // Anti-doublon : ignore les déclenchements multiples très proches
+  const now = Date.now();
+  if (now - lastViolationTime < 800) return;
+  lastViolationTime = now;
+
   violationCount++;
-  const toast = document.getElementById('violation-toast');
+
   if (violationCount === 1) {
-    toast.textContent = '⚠️ Attention ! Première sortie détectée — avertissement sans pénalité.';
-    toast.style.background = 'var(--accent2)';
+    // 1ère sortie = avertissement, AUCUNE pénalité
   } else {
+    // À partir de la 2ème sortie : -0,5 point chacune
     penalty += 0.5;
-    toast.textContent = `🚨 Sortie n°${violationCount} détectée ! −0,5 point (total pénalités : −${penalty.toFixed(1)} pts)`;
-    toast.style.background = 'var(--danger)';
   }
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
 /* ══════════════════════════════════════════
@@ -669,7 +669,6 @@ function submitExam(auto = false) {
   examSubmitted = true;
   clearInterval(timerInterval);
   document.removeEventListener('visibilitychange', onVisibilityChange);
-  window.removeEventListener('blur', onBlur);
 
   // Compute score
   let vfCorrect = 0, qcuCorrect = 0, qcmCorrect = 0;
@@ -728,7 +727,8 @@ function showResults(finalScore, rawScore, vf, qcu, qcm) {
   const pd = document.getElementById('penalties-display');
   if (violationCount > 0) {
     pd.innerHTML = `<div class="penalties-box">
-      ⚠️ <strong>${violationCount} sortie(s) de page détectée(s)</strong> —
+      ⚠️ <strong>${violationCount} sortie(s) de page détectée(s)</strong>
+      (1ère = avertissement, ${Math.max(0, violationCount-1)} sortie(s) supplémentaire(s) pénalisée(s)) —
       Note brute : ${rawScore.toFixed(2)}/20 → Pénalité appliquée : −${penalty.toFixed(1)} pt(s) →
       <strong>Note finale : ${finalScore.toFixed(2)}/20</strong>
     </div>`;
@@ -771,21 +771,21 @@ function openScreenshot() {
   ctx.fillStyle = '#2eaadc';
   ctx.fillRect(0, 0, 640, 5);
 
-  // IAM label
+  // ESTM label
   ctx.fillStyle = '#2eaadc';
   ctx.fillRect(32, 24, 52, 52);
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px serif';
+  ctx.font = 'bold 16px serif';
   ctx.textAlign = 'center';
-  ctx.fillText('IAM', 58, 57);
+  ctx.fillText('ESTM', 58, 55);
 
   ctx.fillStyle = '#e8edf2';
   ctx.font = 'bold 16px Inter, sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('Systèmes d\'Information', 96, 42);
+  ctx.fillText('Systèmes d\\'Information', 96, 42);
   ctx.fillStyle = '#7a9ab5';
   ctx.font = '12px Inter, sans-serif';
-  ctx.fillText('Institut Africain de Management', 96, 62);
+  ctx.fillText('Ecole Superieur de Technologie et de Management', 96, 62);
 
   // divider
   ctx.strokeStyle = '#243447';
@@ -804,8 +804,13 @@ function openScreenshot() {
   // mention pill background
   ctx.fillStyle = mention.color + '33';
   ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(80, 240, 160, 32, 16) :
-    (() => { ctx.moveTo(96,240); ctx.lineTo(224,240); ctx.arcTo(240,240,240,256,16); ctx.lineTo(240,256); ctx.arcTo(240,272,224,272,16); ctx.lineTo(96,272); ctx.arcTo(80,272,80,256,16); ctx.lineTo(80,256); ctx.arcTo(80,240,96,240,16); })();
+  if (ctx.roundRect) {
+    ctx.roundRect(80, 240, 160, 32, 16);
+  } else {
+    ctx.moveTo(96,240); ctx.lineTo(224,240); ctx.arcTo(240,240,240,256,16);
+    ctx.lineTo(240,256); ctx.arcTo(240,272,224,272,16); ctx.lineTo(96,272);
+    ctx.arcTo(80,272,80,256,16); ctx.lineTo(80,256); ctx.arcTo(80,240,96,240,16);
+  }
   ctx.fill();
   ctx.fillStyle = mention.color;
   ctx.font = 'bold 14px Inter, sans-serif';
@@ -822,10 +827,11 @@ function openScreenshot() {
   ctx.fillText(meta, 300, 182);
 
   // detail lines
+  const detailRows = document.querySelectorAll('.result-row');
   const details = [
-    ['Vrai / Faux', document.querySelectorAll('.result-row')[0].querySelector('.correct').textContent],
-    ['Choix unique', document.querySelectorAll('.result-row')[1].querySelector('.correct').textContent],
-    ['Choix multiples', document.querySelectorAll('.result-row')[2].querySelector('.correct').textContent],
+    ['Vrai / Faux', detailRows[0] ? detailRows[0].querySelector('.correct').textContent : ''],
+    ['Choix unique', detailRows[1] ? detailRows[1].querySelector('.correct').textContent : ''],
+    ['Choix multiples', detailRows[2] ? detailRows[2].querySelector('.correct').textContent : ''],
   ];
   ctx.fillStyle = '#243447';
   ctx.fillRect(290, 200, 300, 100);
@@ -836,9 +842,10 @@ function openScreenshot() {
     ctx.fillText(val, 582, 222 + i*28);
   });
 
-  if (parseFloat(finalScore) < parseFloat(document.querySelectorAll('.result-row')[5]?.querySelector('.incorrect')?.textContent?.replace('-','')?.replace(' pt(s)','')||'0') > 0) {
+  // pénalités (affichage simple, lecture directe de la variable `penalty`)
+  if (penalty > 0) {
     ctx.fillStyle = '#e05252'; ctx.font = '12px Inter'; ctx.textAlign = 'left';
-    ctx.fillText('Pénalités appliquées', 302, 308);
+    ctx.fillText(`Pénalités sorties de page : −${penalty.toFixed(1)} pt(s)`, 302, 308);
   }
 
   // date
